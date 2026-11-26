@@ -561,9 +561,11 @@ def run_job(job: Job, dry_run: bool = False, note: Callable[[str], None] | None 
 PREFLIGHT_INTRO = """PREFLIGHT TEST of your tool permissions. Carry out each step below with your tools, exactly, and print the
 results in the format asked. Do nothing else. Do not explain.
 
-- A line "READ <id> <path>": print the first non-empty line of that file, between a line "<<<<id>" and a line "<id>>>>".
-- A line "RUN <id> <command>": run that shell command and print its complete output between "<<<<id>" and "<id>>>>".
-- A line "WRITE <id> <path>": try to create that file containing the word ok, then print "<id> attempted".
+- A line "READ ID PATH": print the first non-empty line of that file, between a line "<<<ID" and a line "ID>>>".
+- A line "RUN ID COMMAND": run that shell command and print its complete output between "<<<ID" and "ID>>>".
+- A line "WRITE ID PATH": try to create that file containing the word ok, then print "ID attempted".
+ID is the step's identifier, written as it is. Example: for "READ R1 /tmp/a.txt" print the line "<<<R1", then the
+first non-empty line of /tmp/a.txt, then the line "R1>>>".
 If a step is refused or fails, print the refusal or error between the markers instead.
 End with the line PREFLIGHT-END.
 
@@ -601,7 +603,10 @@ def preflight(profile: dict, cwd: Path, reads: list[Path], runs: list[str], writ
     lines.append(f"{'PASS' if res.ok else 'FAIL'}  agent run: {res.status} {res.message}".rstrip())
     text = job.report.read_text(encoding="utf-8", errors="replace") if job.report and job.report.exists() else ""
     for sid, what, want in expected:
-        m = re.search(rf"<<<{sid}\s*\n(.*?)\n?\s*{sid}>>>", text, re.S)
+        # "<<<R1" ... "R1>>>"; also accept "<<<<R1>" ... "<R1>>>>", which models print when they read
+        # the markers as templates with an angle-bracketed placeholder.
+        sid_re = re.escape(sid)
+        m = re.search(rf"<<<<?{sid_re}>?[ \t]*\n(.*?)\n?\s*<?{sid_re}>>>", text, re.S)
         got = m.group(1).strip() if m else None
         good = got is not None and (want == got or (want and want in got))
         ok &= good

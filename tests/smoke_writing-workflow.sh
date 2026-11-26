@@ -77,9 +77,11 @@ pass "agent_cli: report saved, unknown placeholder, quota stops without retry, s
 echo "first line" > src.txt
 FAKE_READONLY=1 expect_rc 0 $PY "$SC/agent_cli.py" --agents agents.json --profile rev --preflight --read src.txt --run "echo hello" --cwd w
 has "$T/last.out" "preflight: profile rev: PASS"
+FAKE_READONLY=1 FAKE_MARKERS=angle expect_rc 0 $PY "$SC/agent_cli.py" --agents agents.json --profile rev --preflight --read src.txt --run "echo hello" --cwd w
+has "$T/last.out" "preflight: profile rev: PASS"
 expect_rc 1 $PY "$SC/agent_cli.py" --agents agents.json --profile rev --preflight --read src.txt --cwd w
 has "$T/last.out" "FAIL  write"
-pass "agent_cli --preflight: read and run checked; a reviewer that can write fails"
+pass "agent_cli --preflight: read and run checked (both marker forms); a reviewer that can write fails"
 
 # ------------------------------------------------------------------ make_packet / verify_packet / check_allowance
 mkdir -p "$T/p/src/sub" "$T/p/repo"

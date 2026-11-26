@@ -72,6 +72,9 @@ def minimal_pdf(path: Path, pages: int) -> None:
 
 
 def preflight(prompt: str) -> int:
+    # FAKE_MARKERS=angle prints "<<<<R1>" ... "<R1>>>>", the variant some models produce.
+    angle = os.environ.get("FAKE_MARKERS") == "angle"
+    open_m, close_m = ("<<<<{}>", "<{}>>>>") if angle else ("<<<{}", "{}>>>")
     for line in prompt.splitlines():
         m = re.match(r"(READ|RUN|WRITE) (\w+) (.+)$", line.strip())
         if not m:
@@ -82,10 +85,10 @@ def preflight(prompt: str) -> int:
                 first = next((x.strip() for x in Path(arg).read_text().splitlines() if x.strip()), "")
             except OSError as e:
                 first = f"cannot read: {e}"
-            print(f"<<<{sid}\n{first}\n{sid}>>>")
+            print(f"{open_m.format(sid)}\n{first}\n{close_m.format(sid)}")
         elif kind == "RUN":
             r = subprocess.run(arg, shell=True, capture_output=True, text=True)
-            print(f"<<<{sid}\n{r.stdout.strip()}\n{sid}>>>")
+            print(f"{open_m.format(sid)}\n{r.stdout.strip()}\n{close_m.format(sid)}")
         else:
             if os.environ.get("FAKE_READONLY") == "1":
                 print(f"{sid} refused: read-only")
